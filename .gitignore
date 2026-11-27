@@ -1,0 +1,6 @@
+target/
+*.class
+.idea/
+*.iml
+# keep the BetterModel jar the build needs
+!BodyStealBody/libs/BetterModel.jar

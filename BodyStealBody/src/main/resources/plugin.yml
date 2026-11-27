@@ -1,0 +1,7 @@
+name: BodyStealBody
+version: 1.0.0
+main: com.bodysteal.body.BodyStealBodyPlugin
+api-version: '1.21'
+description: Bodysteal PLUGIN BY L4M1MK1NG - custom body that hides lost limbs
+authors: [L4M1MK1NG]
+depend: [BodySteal, BetterModel]
