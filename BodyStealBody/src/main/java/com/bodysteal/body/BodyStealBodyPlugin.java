@@ -95,9 +95,14 @@ public class BodyStealBodyPlugin extends JavaPlugin implements Listener {
 
     static String stolenName(String slot) { return "bodysteal_stolen_" + slot.toLowerCase(); }
 
-    /** Copies the player body model into BetterModel/models (once). BetterModel needs /bm reload after that. */
+    /**
+     * Copies the player body model into BetterModel/players (once). Models in that folder are
+     * "player" models: BetterModel applies the real player skin to them. BetterModel needs
+     * /bm reload after that.
+     */
     private void installModels() {
-        File dir = new File(getDataFolder().getParentFile(), "BetterModel/models");
+        File base = new File(getDataFolder().getParentFile(), "BetterModel");
+        File dir = new File(base, "players");
         if (!dir.isDirectory() && !dir.mkdirs()) {
             getLogger().warning("Could not create " + dir);
             return;
@@ -105,6 +110,15 @@ public class BodyStealBodyPlugin extends JavaPlugin implements Listener {
         List<String> names = new ArrayList<>();
         names.add(BODY);
         for (String s : SLOTS) names.add(stolenName(s));
+
+        // Older versions of this plugin put the model in models/ (no skin there) - remove those copies.
+        File oldDir = new File(base, "models");
+        boolean removedOld = false;
+        for (String n : names) {
+            File old = new File(oldDir, n + ".bbmodel");
+            if (old.isFile() && old.delete()) removedOld = true;
+        }
+
         boolean copied = false;
         for (String n : names) {
             File f = new File(dir, n + ".bbmodel");
@@ -120,10 +134,16 @@ public class BodyStealBodyPlugin extends JavaPlugin implements Listener {
                 getLogger().warning("Could not write " + f + ": " + e.getMessage());
             }
         }
-        if (copied) {
-            getLogger().warning("Body models were installed. Run /bm reload once (or restart the server) "
-                    + "so BetterModel loads them and rebuilds its resource pack.");
+        if (copied || removedOld) {
+            getLogger().warning("Body models were installed into BetterModel/players. Run /bm reload once "
+                    + "(or restart the server) so BetterModel loads them and rebuilds its resource pack.");
         }
+    }
+
+    /** Player models live in BetterModel's "limb" registry; fall back to the normal registry. */
+    private static ModelRenderer renderer(String name) {
+        ModelRenderer r = BetterModel.limbOrNull(name);
+        return r != null ? r : BetterModel.modelOrNull(name);
     }
 
     // ------------------------------------------------------------ BodySteal state (reflection)
@@ -206,7 +226,7 @@ public class BodyStealBodyPlugin extends JavaPlugin implements Listener {
 
     /** The player's full body, drawn with their own skin. */
     private EntityTracker createMain(Player p) {
-        ModelRenderer r = BetterModel.modelOrNull(BODY);
+        ModelRenderer r = renderer(BODY);
         if (r == null) {
             warnMissing();
             return null;
@@ -217,7 +237,7 @@ public class BodyStealBodyPlugin extends JavaPlugin implements Listener {
 
     /** One limb only, drawn with the skin of the player it was stolen from. */
     private EntityTracker createStolen(Player p, String slot, UUID owner) {
-        ModelRenderer r = BetterModel.modelOrNull(stolenName(slot));
+        ModelRenderer r = renderer(stolenName(slot));
         if (r == null) {
             warnMissing();
             return null;
@@ -233,7 +253,7 @@ public class BodyStealBodyPlugin extends JavaPlugin implements Listener {
         if (warnedMissingModel) return;
         warnedMissingModel = true;
         getLogger().warning("BetterModel does not know the model '" + BODY + "' yet. Run /bm reload "
-                + "and check that plugins/BetterModel/models contains bodysteal_body.bbmodel.");
+                + "and check that plugins/BetterModel/players contains bodysteal_body.bbmodel.");
     }
 
     @EventHandler
@@ -241,4 +261,5 @@ public class BodyStealBodyPlugin extends JavaPlugin implements Listener {
         Rig r = rigs.remove(e.getPlayer().getUniqueId());
         if (r != null) r.closeAll();
     }
-}
+                }
+            
